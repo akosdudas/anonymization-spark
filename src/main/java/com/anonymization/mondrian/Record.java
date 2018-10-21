@@ -11,6 +11,7 @@ public abstract class Record implements Serializable {
     /**
      * Storing final data, for each quid.
      */
+    @org.springframework.data.annotation.Transient
     protected HashMap<String,String> finalData=new HashMap<>();
 
     public abstract void setFinalData(int dim,String values);

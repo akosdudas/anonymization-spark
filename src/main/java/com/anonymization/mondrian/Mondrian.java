@@ -1,6 +1,5 @@
 package com.anonymization.mondrian;
 
-import Data.*;
 import com.anonymization.mondrian.Partition;
 import com.anonymization.mondrian.Record;
 import org.apache.spark.api.java.JavaRDD;
@@ -73,8 +72,4 @@ public class Mondrian<T extends Record> {
 
 
 
-    private int median(PartitionMedical partitionMedical, int dimension) {
-        ArrayList<Integer> tmp = partitionMedical.getSortedforDimension(dimension);
-        return tmp.get(tmp.size() / 2);
-    }
 }

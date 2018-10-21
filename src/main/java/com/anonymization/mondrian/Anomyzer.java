@@ -1,5 +1,6 @@
 package com.anonymization.mondrian;
 
+import com.anonymization.model.Report;
 import com.datastax.spark.connector.japi.CassandraRow;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaRDD;
@@ -11,6 +12,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import static com.datastax.spark.connector.japi.CassandraJavaUtil.javaFunctions;
+import static com.datastax.spark.connector.japi.CassandraJavaUtil.mapRowTo;
+import static com.datastax.spark.connector.japi.CassandraJavaUtil.mapToRow;
 
 public class Anomyzer {
 
@@ -29,7 +32,7 @@ public class Anomyzer {
      */
     public static JavaSparkContext sc;
 
-    public static void main(String[] args){
+    public static void run(){
         SparkConf conf = new SparkConf();
         conf.setAppName("Spark job");
         conf.setMaster("local[*]");
@@ -43,45 +46,29 @@ public class Anomyzer {
         }
 //        ids.add(1);ids.add(2);ids.add(3);ids.add(4);ids.add(5);
 
-        List<JavaRDD<CassandraRow>> c = ids.stream().map(id -> {
-            return javaFunctions(sc).cassandraTable(KEYSPACE, TABLE).where(
+        List<JavaRDD<Report>> c = ids.stream().map(id -> {
+            return javaFunctions(sc).cassandraTable(KEYSPACE, TABLE,mapRowTo(Report.class)).where(
                     "id = ?", id);
         }).collect(Collectors.toList());
 
-        JavaRDD<CassandraRow> unionTable = sc.union(c.get(0), c.subList(1, c.size() - 1)).coalesce(8);
-        JavaRDD<Report> reportJavaRDD=unionTable.map(new Function<CassandraRow, Report>() {
-            @Override
-            public Report call(CassandraRow cassandraRow) throws Exception {
-                Report report=new Report();
-                report.setId(cassandraRow.getInt("id"));
-                report.setMessage(cassandraRow.getString("message"));
-                report.setCpuname(cassandraRow.getString("cpuname"));
-                report.setExceptionobjecttype(cassandraRow.getString("exceptionobjecttype"));
-                report.setFreememory(cassandraRow.getLong("freememory"));
-                report.setMqarch(cassandraRow.getString("mqarch"));
-                report.setMqedition(cassandraRow.getInt("mqedition"));
-                report.setMquilang(cassandraRow.getString("mquilang"));
-                report.setMqversion(cassandraRow.getString("mqversion"));
-                report.setNetfxversions(cassandraRow.getString("netfxversions"));
-                report.setOriginalhash(cassandraRow.getString("originalhash"));
-                report.setOs(cassandraRow.getString("os"));
-                report.setOsarch(cassandraRow.getString("osarch"));
-                report.setOsversion(cassandraRow.getString("osversion"));
-                report.setTimestamp(cassandraRow.getString("timestamp"));
-                report.setVisiblememory(cassandraRow.getLong("visiblememory"));
-                report.setStacktrace(cassandraRow.getString("stacktrace"));
-                report.setSerialhash(cassandraRow.getString("serialhash"));
-                report.addQuids();
-                return report;
-            }
+        JavaRDD<Report> unionTable = sc.union(c.get(0), c.subList(1, c.size() - 1)).coalesce(1).map((Function<Report, Report>) report -> {
+            report.addQuids();
+            return report;
         });
 
-//        System.out.println(reportJavaRDD.collect());
 
-//        System.out.println("The number of elements in the rdd is: "+reportJavaRDD.count());
-//        System.out.println(reportJavaRDD.collect() );
-        Mondrian<Report> mondrian=new Mondrian<>(2,sc,reportJavaRDD);
+
+        Mondrian<Report> mondrian=new Mondrian<>(2,sc,unionTable.coalesce(1));
         Result r=mondrian.runAlgortihm();
         System.out.println(r);
+        javaFunctions(r.getResultJavaRDD()).writerBuilder(KEYSPACE,TABLE,mapToRow(Report.class)).saveToCassandra();
+//
+//        System.out.println(unionTable.coalesce(1).count());
+//        System.out.println();
+//        List<Report> that=unionTable.coalesce(1).collect();
+//        that.get(0).setFreememory_final("11111111");
+//        javaFunctions(sc.parallelize(that)).writerBuilder(KEYSPACE,TABLE,mapToRow(Report.class)).saveToCassandra();
+        sc.stop();
+        sc.close();
     }
 }

@@ -1,13 +1,15 @@
+package com.anonymization.mondrian;
 
-
-import Anom.Mondrian;
+import com.anonymization.model.Report;
 import org.apache.spark.api.java.JavaRDD;
-import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.api.java.function.FlatMapFunction;
 
+import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 
-public class Result {
+public class Result implements Serializable {
     ArrayList<String> resultArrayList;
     JavaRDD<Report> resultJavaRDD;
 
@@ -22,12 +24,15 @@ public class Result {
             resultArrayList.add(p.toString());
 
         }
-        resultJavaRDD=Mondrian.sc.parallelize(res).flatMap((FlatMapFunction<Partition, Report>) partition -> {
-            ArrayList<Report> temp=new ArrayList<>();
-            partition.getRecordArrayList().forEach(record -> {
-                temp.add((Report)record);
-            });
-            return temp;
+        resultJavaRDD=Mondrian.sc.parallelize(res).flatMap(new FlatMapFunction<Partition, Report>() {
+            @Override
+            public Iterator<Report> call(Partition partition) throws Exception {
+                List<Report> temp=new ArrayList<>();
+                partition.getRecordArrayList().forEach(record -> {
+                    temp.add((Report)record);
+                });
+                return temp.iterator();
+            }
         });
     }
 

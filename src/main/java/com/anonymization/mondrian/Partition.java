@@ -1,6 +1,5 @@
 package com.anonymization.mondrian;
 
-import Anom.Mondrian;
 import com.anonymization.mondrian.Record;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.function.Function;
