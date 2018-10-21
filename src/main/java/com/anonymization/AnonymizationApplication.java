@@ -14,4 +14,9 @@ public class AnonymizationApplication {
         SpringApplication.run(AnonymizationApplication.class, args);
 
     }
+
+    @Override
+    protected void finalize() throws Throwable {
+        Anomyzer.stop();
+    }
 }

@@ -62,6 +62,8 @@ public class Anomyzer {
             report.addQuids();
             return report;
         });
+        if (unionTable.count()==0)
+            return;
 
         Mondrian<Report> mondrian = new Mondrian<>(2, sc, unionTable.coalesce(1));
         Result r = mondrian.runAlgortihm();
@@ -73,6 +75,9 @@ public class Anomyzer {
 //        List<Report> that=unionTable.coalesce(1).collect();
 //        that.get(0).setFreememory_final("11111111");
 //        javaFunctions(sc.parallelize(that)).writerBuilder(KEYSPACE,TABLE,mapToRow(Report.class)).saveToCassandra();
+
+    }
+    public static void stop(){
         sc.stop();
         sc.close();
     }

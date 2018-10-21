@@ -19,4 +19,6 @@ public abstract class Record implements Serializable {
     public abstract Quid getQuidForDim(int dimension);
 
     public abstract int getForDim(int dimension);
+
+    public abstract void setFinalPressed();
 }

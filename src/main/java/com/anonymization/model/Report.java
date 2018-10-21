@@ -3,6 +3,8 @@ package com.anonymization.model;
 
 import com.anonymization.mondrian.Quid;
 import com.anonymization.mondrian.Record;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jdk.nashorn.internal.ir.annotations.Ignore;
 import org.springframework.data.cassandra.core.cql.PrimaryKeyType;
 import org.springframework.data.cassandra.core.mapping.Column;
@@ -14,6 +16,7 @@ import java.util.ArrayList;
 @Table(value="reports")
 public class Report extends Record {
 
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     @PrimaryKeyColumn(name = "id",ordinal = 0, type = PrimaryKeyType.PARTITIONED)
     private int id;
 
@@ -32,6 +35,7 @@ public class Report extends Record {
     private int mqedition;
     @Column(value="mquilang")
     private String mquilang;
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     @Column(value="serialhash")
     private String serialhash;
     @Column(value="os")
@@ -63,8 +67,13 @@ public class Report extends Record {
     @org.springframework.data.annotation.Transient
     private Quid<Long> freememoryQuid;
 
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     @Column(value="cpuname")
     private String cpuname;
+
+    @Column(value="cpuname_final")
+    private String cpuname_final;
+
     @Column(value="netfxversions")
     private String netfxversions;
     @Column("originalhash")
@@ -75,8 +84,12 @@ public class Report extends Record {
     private String mqarch;
     @Column(value="exceptionobjecttype")
     private String exceptionobjecttype;
+
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     @Column(value="stacktrace")
     private String stacktrace;
+    @Column(value="stacktrace_final")
+    private String stacktrace_final;
 
     @org.springframework.data.annotation.Transient
     private ArrayList<Quid> quids=new ArrayList<>();
@@ -182,6 +195,14 @@ public class Report extends Record {
         this.visiblememoryQuid=new Quid<>(visiblememory);
     }
 
+    public String getStacktrace_final() {
+        return stacktrace_final;
+    }
+
+    public void setStacktrace_final(String stacktrace_final) {
+        this.stacktrace_final = stacktrace_final;
+    }
+
     public Long getFreememory() {
         return freememory;
     }
@@ -190,6 +211,14 @@ public class Report extends Record {
 
         this.freememory = freememory;
         this.freememoryQuid=new Quid<>(freememory);
+    }
+
+    public String getCpuname_final() {
+        return cpuname_final;
+    }
+
+    public void setCpuname_final(String cpuname_final) {
+        this.cpuname_final = cpuname_final;
     }
 
     public String getVisiblememory_final() {
@@ -279,6 +308,12 @@ public class Report extends Record {
     @Override
     public int getForDim(int dimension) {
         return 0;
+    }
+
+    @Override
+    public void setFinalPressed() {
+        setStacktrace_final("Something");
+        setCpuname_final("CPU");
     }
 
 

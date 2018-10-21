@@ -65,6 +65,7 @@ public class  Partition implements Serializable {
             ) {
                 mr.setFinalData(1, rangeFordim.get(1));
                 mr.setFinalData(2, rangeFordim.get(2));
+                mr.setFinalPressed();
             }
 
             return null;
