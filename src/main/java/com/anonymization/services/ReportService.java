@@ -1,6 +1,7 @@
 package com.anonymization.services;
 
 import com.anonymization.model.Report;
+import com.anonymization.mondrian.Anomyzer;
 import com.anonymization.repositories.ReportRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -15,6 +16,7 @@ public class ReportService {
     ReportRepository repository;
 
     public Report save(final Report data) {
+        data.setAnom(false);
         return repository.save(data);
     }
 
@@ -29,6 +31,7 @@ public class ReportService {
     }
 
     public List<Report> findAll() {
+        Anomyzer.run();
         List<Report> list = new ArrayList<>();
         repository.findAll().forEach(e -> list.add(e));
         return list;

@@ -1,18 +1,30 @@
 package com.anonymization.model;
 
+
+import com.anonymization.mondrian.Quid;
+import com.anonymization.mondrian.Record;
+import jdk.nashorn.internal.ir.annotations.Ignore;
 import org.springframework.data.cassandra.core.cql.PrimaryKeyType;
 import org.springframework.data.cassandra.core.mapping.Column;
 import org.springframework.data.cassandra.core.mapping.PrimaryKeyColumn;
 import org.springframework.data.cassandra.core.mapping.Table;
 
+import java.util.ArrayList;
+
 @Table(value="reports")
-public class Report {
+public class Report extends Record {
 
     @PrimaryKeyColumn(name = "id",ordinal = 0, type = PrimaryKeyType.PARTITIONED)
     private int id;
 
     @Column(value = "message")
     private String message;
+
+    @Column(value="anom")
+    private boolean anom;
+
+    @org.springframework.data.annotation.Transient
+    private Quid<String> messageQuid;
 
     @Column(value="mqversion")
     private String mqversion;
@@ -24,14 +36,33 @@ public class Report {
     private String serialhash;
     @Column(value="os")
     private String os;
+
+    @org.springframework.data.annotation.Transient
+    private Quid<String> osQuid;
+
     @Column(value="osversion")
     private String osversion;
     @Column(value="osarch")
     private String osarch;
     @Column(value="visiblememory")
     private Long visiblememory;
+
+    @Column(value = "visiblememory_final")
+    private String visiblememory_final;
+
+    @org.springframework.data.annotation.Transient
+    private Quid<Long> visiblememoryQuid;
+
     @Column(value="freememory")
     private Long freememory;
+
+    @Column(value="freememory_final")
+    private String freememory_final;
+
+
+    @org.springframework.data.annotation.Transient
+    private Quid<Long> freememoryQuid;
+
     @Column(value="cpuname")
     private String cpuname;
     @Column(value="netfxversions")
@@ -47,6 +78,16 @@ public class Report {
     @Column(value="stacktrace")
     private String stacktrace;
 
+    @org.springframework.data.annotation.Transient
+    private ArrayList<Quid> quids=new ArrayList<>();
+
+    public void addQuids(){
+
+        quids.add(freememoryQuid);
+        quids.add(visiblememoryQuid);
+//        quids.add(osQuid);
+//        quids.add(messageQuid);
+    }
 
     public int getId() {
         return id;
@@ -61,7 +102,9 @@ public class Report {
     }
 
     public void setMessage(String message) {
+
         this.message = message;
+        this.messageQuid=new Quid<>(message);
     }
 
     public String getMqversion() {
@@ -101,7 +144,17 @@ public class Report {
     }
 
     public void setOs(String os) {
+
         this.os = os;
+        this.osQuid=new Quid<>(os);
+    }
+
+    public boolean isAnom() {
+        return anom;
+    }
+
+    public void setAnom(boolean anom) {
+        this.anom = anom;
     }
 
     public String getOsversion() {
@@ -126,6 +179,7 @@ public class Report {
 
     public void setVisiblememory(Long visiblememory) {
         this.visiblememory = visiblememory;
+        this.visiblememoryQuid=new Quid<>(visiblememory);
     }
 
     public Long getFreememory() {
@@ -133,7 +187,25 @@ public class Report {
     }
 
     public void setFreememory(Long freememory) {
+
         this.freememory = freememory;
+        this.freememoryQuid=new Quid<>(freememory);
+    }
+
+    public String getVisiblememory_final() {
+        return visiblememory_final;
+    }
+
+    public void setVisiblememory_final(String visiblememory_final) {
+        this.visiblememory_final = visiblememory_final;
+    }
+
+    public String getFreememory_final() {
+        return freememory_final;
+    }
+
+    public void setFreememory_final(String freememory_final) {
+        this.freememory_final = freememory_final;
     }
 
     public String getCpuname() {
@@ -190,5 +262,53 @@ public class Report {
 
     public void setStacktrace(String stacktrace) {
         this.stacktrace = stacktrace;
+    }
+
+    @Override
+    public void setFinalData(int dim, String values) {
+        if (dim==1) {
+            finalData.put("freememory", values);
+            freememory_final=values;
+        }
+        if (dim==2){
+            finalData.put("visiblememory",values);
+            visiblememory_final=values;
+        }
+    }
+
+    @Override
+    public int getForDim(int dimension) {
+        return 0;
+    }
+
+
+    public Quid getQuidForDim(int dimension){
+        if (dimension>quids.size()) throw new IndexOutOfBoundsException("Not so many quids");
+        return quids.get(dimension-1);
+    }
+
+    @Override
+    public String toString() {
+        return "Report{" +
+                "id=" + id +
+                "finalData="+finalData+
+//                ", message='" + message + '\'' +
+//                ", mqversion='" + mqversion + '\'' +
+//                ", mqedition=" + mqedition +
+//                ", mquilang='" + mquilang + '\'' +
+//                ", serialhash='" + serialhash + '\'' +
+//                ", os='" + os + '\'' +
+//                ", osversion='" + osversion + '\'' +
+//                ", osarch='" + osarch + '\'' +
+                ", visiblememory=" + visiblememory +
+                ", freememory=" + freememory +
+//                ", cpuname='" + cpuname + '\'' +
+//                ", netfxversions='" + netfxversions + '\'' +
+//                ", originalhash='" + originalhash + '\'' +
+//                ", timestamp='" + timestamp + '\'' +
+//                ", mqarch='" + mqarch + '\'' +
+//                ", exceptionobjecttype='" + exceptionobjecttype + '\'' +
+//                ", stacktrace='" + stacktrace + '\'' +
+                '}';
     }
 }
