@@ -1,5 +1,6 @@
 package com.anonymization;
 
+import com.anonymization.mondrian.Anomyzer;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.ComponentScan;
@@ -9,6 +10,8 @@ import org.springframework.context.annotation.ComponentScan;
 public class AnonymizationApplication {
 
     public static void main(String[] args) {
+        Anomyzer.init();
         SpringApplication.run(AnonymizationApplication.class, args);
+
     }
 }

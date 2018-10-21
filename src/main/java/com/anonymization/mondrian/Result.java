@@ -29,7 +29,9 @@ public class Result implements Serializable {
             public Iterator<Report> call(Partition partition) throws Exception {
                 List<Report> temp=new ArrayList<>();
                 partition.getRecordArrayList().forEach(record -> {
-                    temp.add((Report)record);
+                    Report reportTemp=(Report)record;
+                    reportTemp.setAnom(true);
+                    temp.add(reportTemp);
                 });
                 return temp.iterator();
             }

@@ -21,47 +21,52 @@ public class Anomyzer {
     /**
      * Cassandra keyspace name.
      */
-    private static String KEYSPACE="szakdolgozat";
+    private static String KEYSPACE = "szakdolgozat";
     /**
      * Cassandra table name.
      */
-    private static String TABLE="reports";
+    private static String TABLE = "reports";
 
     /**
      * Same spark context for each component of the anomyzer module.
      */
     public static JavaSparkContext sc;
 
-    public static void run(){
+    public static void init() {
         SparkConf conf = new SparkConf();
         conf.setAppName("Spark job");
         conf.setMaster("local[*]");
         conf.set("spark.cassandra.connection.host", CASSANDRA_ADDRESS_LOCAL);
 
-        sc= new JavaSparkContext(conf);
+        sc = new JavaSparkContext(conf);
+    }
 
-        ArrayList<Integer> ids=new ArrayList<>();
-        for (int i=1;i<22;i++){
+    public static void run() {
+
+
+        ArrayList<Integer> ids = new ArrayList<>();
+        for (int i = 1; i < 22; i++) {
             ids.add(i);
         }
 //        ids.add(1);ids.add(2);ids.add(3);ids.add(4);ids.add(5);
 
-        List<JavaRDD<Report>> c = ids.stream().map(id -> {
-            return javaFunctions(sc).cassandraTable(KEYSPACE, TABLE,mapRowTo(Report.class)).where(
-                    "id = ?", id);
-        }).collect(Collectors.toList());
+//        List<JavaRDD<Report>> c = ids.stream().map(id -> {
+//            return javaFunctions(sc).cassandraTable(KEYSPACE, TABLE,mapRowTo(Report.class)).where(
+////                    "id = ?", id);
+//                    "anom=false");
+//        }).collect(Collectors.toList());
 
-        JavaRDD<Report> unionTable = sc.union(c.get(0), c.subList(1, c.size() - 1)).coalesce(1).map((Function<Report, Report>) report -> {
+        JavaRDD<Report> unionTable = javaFunctions(sc).cassandraTable(KEYSPACE, TABLE, mapRowTo(Report.class)).where(
+                "anom=false"
+        ).map(report -> {
             report.addQuids();
             return report;
         });
 
-
-
-        Mondrian<Report> mondrian=new Mondrian<>(2,sc,unionTable.coalesce(1));
-        Result r=mondrian.runAlgortihm();
+        Mondrian<Report> mondrian = new Mondrian<>(2, sc, unionTable.coalesce(1));
+        Result r = mondrian.runAlgortihm();
         System.out.println(r);
-        javaFunctions(r.getResultJavaRDD()).writerBuilder(KEYSPACE,TABLE,mapToRow(Report.class)).saveToCassandra();
+        javaFunctions(r.getResultJavaRDD()).writerBuilder(KEYSPACE, TABLE, mapToRow(Report.class)).saveToCassandra();
 //
 //        System.out.println(unionTable.coalesce(1).count());
 //        System.out.println();
