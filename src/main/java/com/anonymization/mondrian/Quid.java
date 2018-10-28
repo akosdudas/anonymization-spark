@@ -6,6 +6,9 @@ public class Quid<T> implements Serializable {
 
     private T value;
 
+    public String getType(){
+        return value.getClass().getTypeName();
+    }
     public Quid(T value) {
         this.value = value;
     }
