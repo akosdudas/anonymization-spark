@@ -1,8 +1,10 @@
 package com.anonymization.model;
 
 
+import com.anonymization.mondrian.NumericQuid;
 import com.anonymization.mondrian.Quid;
 import com.anonymization.mondrian.Record;
+import com.anonymization.mondrian.StringQuid;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jdk.nashorn.internal.ir.annotations.Ignore;
@@ -20,8 +22,12 @@ public class Report extends Record {
     @PrimaryKeyColumn(name = "id",ordinal = 0, type = PrimaryKeyType.PARTITIONED)
     private int id;
 
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     @Column(value = "message")
     private String message;
+
+    @Column(value="message_final")
+    private String message_final;
 
     @Column(value="anom")
     private boolean anom;
@@ -38,8 +44,12 @@ public class Report extends Record {
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     @Column(value="serialhash")
     private String serialhash;
+
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     @Column(value="os")
     private String os;
+    @Column(value="os_final")
+    private String os_final;
 
     @org.springframework.data.annotation.Transient
     private Quid<String> osQuid;
@@ -71,6 +81,9 @@ public class Report extends Record {
     @Column(value="cpuname")
     private String cpuname;
 
+    @org.springframework.data.annotation.Transient
+    private Quid<String> cpunameQuid;
+
     @Column(value="cpuname_final")
     private String cpuname_final;
 
@@ -94,12 +107,17 @@ public class Report extends Record {
     @org.springframework.data.annotation.Transient
     private ArrayList<Quid> quids=new ArrayList<>();
 
+    @org.springframework.data.annotation.Transient
+    private ArrayList<Quid> suppressedQuids=new ArrayList<>();
+
     public void addQuids(){
 
         quids.add(freememoryQuid);
         quids.add(visiblememoryQuid);
-//        quids.add(osQuid);
-//        quids.add(messageQuid);
+        quids.add(osQuid);
+        quids.add(messageQuid);
+
+        suppressedQuids.add(cpunameQuid);
     }
 
     public int getId() {
@@ -117,7 +135,7 @@ public class Report extends Record {
     public void setMessage(String message) {
 
         this.message = message;
-        this.messageQuid=new Quid<>(message);
+        this.messageQuid=new StringQuid(message);
     }
 
     public String getMqversion() {
@@ -159,7 +177,23 @@ public class Report extends Record {
     public void setOs(String os) {
 
         this.os = os;
-        this.osQuid=new Quid<>(os);
+        this.osQuid=new StringQuid(os);
+    }
+
+    public String getMessage_final() {
+        return message_final;
+    }
+
+    public void setMessage_final(String message_final) {
+        this.message_final = message_final;
+    }
+
+    public String getOs_final() {
+        return os_final;
+    }
+
+    public void setOs_final(String os_final) {
+        this.os_final = os_final;
     }
 
     public boolean isAnom() {
@@ -192,7 +226,7 @@ public class Report extends Record {
 
     public void setVisiblememory(Long visiblememory) {
         this.visiblememory = visiblememory;
-        this.visiblememoryQuid=new Quid<>(visiblememory);
+        this.visiblememoryQuid=new NumericQuid(visiblememory);
     }
 
     public String getStacktrace_final() {
@@ -210,7 +244,7 @@ public class Report extends Record {
     public void setFreememory(Long freememory) {
 
         this.freememory = freememory;
-        this.freememoryQuid=new Quid<>(freememory);
+        this.freememoryQuid=new NumericQuid(freememory);
     }
 
     public String getCpuname_final() {
@@ -242,7 +276,9 @@ public class Report extends Record {
     }
 
     public void setCpuname(String cpuname) {
+
         this.cpuname = cpuname;
+        this.cpunameQuid=new StringQuid(cpuname);
     }
 
     public String getNetfxversions() {
@@ -295,31 +331,49 @@ public class Report extends Record {
 
     @Override
     public void setFinalData(int dim, String values) {
-        if (dim==1) {
+        if (dim==0) {
             finalData.put("freememory", values);
             freememory_final=values;
         }
-        if (dim==2){
+        if (dim==1){
             finalData.put("visiblememory",values);
             visiblememory_final=values;
         }
+        if (dim==2){
+            finalData.put("os",values);
+            os_final=values;
+        }
+        if (dim==3){
+            finalData.put("message",values);
+            message_final=values;
+        }
+
+
     }
 
     @Override
-    public int getForDim(int dimension) {
-        return 0;
+    public Quid getSuppressedDim(int dimension){
+        if (dimension>=suppressedQuids.size()) throw new IndexOutOfBoundsException("Not so many quids");
+        return suppressedQuids.get(dimension);
     }
 
     @Override
-    public void setFinalPressed() {
-        setStacktrace_final("Something");
-        setCpuname_final("CPU");
+    public void setFinalPressed(int dim,String value) {
+        if (dim==0) {
+            setCpuname_final(value);
+        }
     }
 
 
     public Quid getQuidForDim(int dimension){
         if (dimension>quids.size()) throw new IndexOutOfBoundsException("Not so many quids");
-        return quids.get(dimension-1);
+        return quids.get(dimension);
+    }
+
+    @org.springframework.data.annotation.Transient
+    @Override
+    public ArrayList<Quid> getQuids() {
+        return quids;
     }
 
     @Override
@@ -327,12 +381,12 @@ public class Report extends Record {
         return "Report{" +
                 "id=" + id +
                 "finalData="+finalData+
-//                ", message='" + message + '\'' +
+                ", message='" + message + '\'' +
 //                ", mqversion='" + mqversion + '\'' +
 //                ", mqedition=" + mqedition +
 //                ", mquilang='" + mquilang + '\'' +
 //                ", serialhash='" + serialhash + '\'' +
-//                ", os='" + os + '\'' +
+                ", os='" + os + '\'' +
 //                ", osversion='" + osversion + '\'' +
 //                ", osarch='" + osarch + '\'' +
                 ", visiblememory=" + visiblememory +

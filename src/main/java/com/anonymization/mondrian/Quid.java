@@ -2,13 +2,10 @@ package com.anonymization.mondrian;
 
 import java.io.Serializable;
 
-public class Quid<T> implements Serializable {
+public abstract class Quid<T> implements Serializable {
 
-    private T value;
+    private  T value;
 
-    public String getType(){
-        return value.getClass().getTypeName();
-    }
     public Quid(T value) {
         this.value = value;
     }
@@ -20,4 +17,10 @@ public class Quid<T> implements Serializable {
     public void setValue(T value) {
         this.value = value;
     }
+
+    public String getType(){
+        return value.getClass().getTypeName();
+    }
+
+    abstract public boolean biggerThen(Quid median);
 }
