@@ -104,6 +104,7 @@ public class Report extends Record {
     @Column(value="stacktrace_final")
     private String stacktrace_final;
 
+    @JsonIgnore
     @org.springframework.data.annotation.Transient
     private ArrayList<Quid> quids=new ArrayList<>();
 
