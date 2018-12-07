@@ -24,17 +24,14 @@ public class Result implements Serializable {
             resultArrayList.add(p.toString());
 
         }
-        resultJavaRDD=Mondrian.sc.parallelize(res).flatMap(new FlatMapFunction<Partition, Report>() {
-            @Override
-            public Iterator<Report> call(Partition partition) throws Exception {
-                List<Report> temp=new ArrayList<>();
-                partition.getRecordArrayList().forEach(record -> {
-                    Report reportTemp=(Report)record;
-                    reportTemp.setAnom(true);
-                    temp.add(reportTemp);
-                });
-                return temp.iterator();
-            }
+        resultJavaRDD=Mondrian.sc.parallelize(res).flatMap((FlatMapFunction<Partition, Report>) partition -> {
+            List<Report> temp=new ArrayList<>();
+            partition.getRecordArrayList().forEach(record -> {
+                Report reportTemp=(Report)record;
+                reportTemp.setAnom(true);
+                temp.add(reportTemp);
+            });
+            return temp.iterator();
         });
     }
 

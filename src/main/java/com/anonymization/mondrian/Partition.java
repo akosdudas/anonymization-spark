@@ -8,8 +8,10 @@ import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.function.Function;
 import org.apache.spark.api.java.function.PairFunction;
+import org.apache.spark.broadcast.Broadcast;
 import scala.Tuple2;
 
+import javax.servlet.http.Part;
 import java.io.Serializable;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -26,7 +28,6 @@ public class Partition implements Serializable {
 
     private HashMap<Integer, Long> statForDim = new HashMap<>();
     private HashMap<Integer, String> rangeFordim = new HashMap<>();
-    private HashMap<Integer, String> cutForStringQuid = new HashMap<>();
 
     public Partition(JavaRDD<Record> data) {
         this.data = data;
@@ -45,16 +46,13 @@ public class Partition implements Serializable {
             } catch (ArrayIndexOutOfBoundsException e) {
                 e.printStackTrace();
             }
-//        int max = recordArrayList.get(0).getForDim(dimension);
             long max = (long) recordArrayList.get(0).getQuidForDim(dimension).getValue();
             for (Record r : recordArrayList) {
                 if ((long) r.getQuidForDim(dimension).getValue() > max) {
-//                max = r.getForDim(dimension);
                     max = (long) r.getQuidForDim(dimension).getValue();
 
                 }
                 if ((long) r.getQuidForDim(dimension).getValue() < min) {
-//                min = r.getForDim(dimension);
                     min = (long) r.getQuidForDim(dimension).getValue();
                 }
             }
@@ -70,12 +68,15 @@ public class Partition implements Serializable {
 
     }
 
+
+
     public ArrayList<Partition> splitToPartitions(int k) {
 
         ArrayList<Partition> tmp = new ArrayList<>();
+        long l=data.count();
+        Broadcast<Long> br=Mondrian.sc.broadcast(l);
 
-
-        if (data.count() < 2 * k) {
+        if (br.getValue() < 2 * k) {
             recordArrayList = data.collect();
             getRangeForDim(0);
             getRangeForDim(1);
@@ -93,9 +94,10 @@ public class Partition implements Serializable {
 
             return null;
         }
+
         updateStatistics();
         int dimension = getDimension();
-        System.out.println("The dimension is: " + dimension);
+
         Record first=data.first();
         Partition lf;
         Partition rf;
@@ -111,34 +113,41 @@ public class Partition implements Serializable {
 
                     }).sortByKey(true).values().cache();
 
-            long count = dimRecordJavaPairRDD.count();
+            JavaPairRDD<Record,Long> indexedRDD=dimRecordJavaPairRDD.zipWithIndex();
 
-            List<Record> left = dimRecordJavaPairRDD.take((int) count / 2);
-            long median = (long) left.get(left.size() - 1).getQuidForDim(dimension).getValue();
-            lf = new Partition(Mondrian.sc.parallelize(left));
-            //Partition rf = new Partition(dimRecordJavaPairRDD.subtract(Mondrian.sc.parallelize(left)));
-            rf = new Partition(dimRecordJavaPairRDD.filter((Function<Record, Boolean>) record -> (long) record.getQuidForDim(dimension).getValue() > median));
+            long count=br.getValue();
+            long medIndex=count/2;
+            JavaRDD<Record> left=indexedRDD.filter(recordLongTuple2 -> recordLongTuple2._2()<=medIndex).keys();
+            JavaRDD<Record> right=indexedRDD.filter(recordLongTuple2 -> recordLongTuple2._2>medIndex).keys();
+            lf = new Partition(left);
+            rf=new Partition(right);
             dimRecordJavaPairRDD.unpersist();
-            System.out.println("The left side is :\n" + lf.data.count());
-            System.out.println("\n\nThe right side is: \n" + rf.data.count());
+
         }
         else{
             data = data.cache();
-            data.cartesian(data);
-            JavaPairRDD<Record, Record> pairRDD = data.cartesian(data);
             StringComparator stringComparator=new StringComparator();
+            JavaPairRDD<Record, Record> pairRDD = data.cartesian(data);
             JavaRDD<String> stringJavaRDD = pairRDD.map(stringStringTuple2 -> stringComparator.getLongestCommonSubstring
-                    ((String) stringStringTuple2._1.getQuidForDim(dimension).getValue(), (String) stringStringTuple2._2.getQuidForDim(dimension).getValue()));
+                    ((String) stringStringTuple2._1.getQuidForDim(dimension).getValue(),
+                            (String) stringStringTuple2._2.getQuidForDim(dimension)
+                                    .getValue())
+                    .trim());
             Map<String, Long> commonStrings = stringJavaRDD.countByValue();
-            Long sum = commonStrings.values().stream().reduce(0L, Long::sum);
+            HashMap<String,Long> h=new HashMap<>();
+            for (Map.Entry<String,Long> m:commonStrings.entrySet()
+                 ) {
+                h.put(m.getKey(),m.getValue()/2);
+            }
+            Long sum = h.values().stream().reduce(0L, Long::sum);
             if (statForDim.containsKey(dimension))
                 statForDim.replace(dimension, sum);
             else
                 statForDim.put(dimension, sum);
             String result = "";
             double diff = -1;
-            int halfSize = (int) (data.count() / 2);
-            data = data.unpersist();
+            int halfSize = (int) (br.getValue() / 2);
+
             for (Map.Entry<String, Long> m : commonStrings.entrySet()) {
                 if (diff == -1)
                     diff = Math.abs(halfSize - m.getValue());
@@ -148,11 +157,11 @@ public class Partition implements Serializable {
                 }
             }
             String median=result;
-            data=data.cache();
+
             JavaRDD<Record> cont=data.filter(record ->((String) record.getQuidForDim(dimension).getValue()).contains(median));
             JavaRDD<Record> notcont=data.filter(record -> !((String)record.getQuidForDim(dimension).getValue()).contains(median));
-            long count=data.count();
-            if (cont.count()==count || cont.count()==0){
+//            long count=data.count();
+            if (cont.count()==br.getValue() || cont.count()==0){
                 double[] weigths={2.0,2.0};
                 JavaRDD<Record>[] recordJavaRDDs=data.randomSplit(weigths);
                 cont=recordJavaRDDs[0];
@@ -160,42 +169,13 @@ public class Partition implements Serializable {
             }
             lf=new Partition(cont);
             rf=new Partition(notcont);
-            System.out.println("The left side is :\n" + lf.data.count());
-            System.out.println("\n\nThe right side is: \n" + rf.data.count());
+
             data.unpersist();
         }
         tmp.add(lf);
         tmp.add(rf);
 
         return tmp;
-    }
-
-    private String getSuppresedForPartition(int dim) {
-        List<String> strings=recordArrayList.stream().map(record -> (String)record.getSuppressedDim(dim).getValue()).collect(Collectors.toList());
-        List<String[]> words=strings.stream().map(s1 ->s1.split("\\s+")).collect(Collectors.toList());
-        boolean stop=false;
-        int i=0;
-        String result="";
-        while(!stop && i<words.get(0).length){
-            int finalI = i;
-            try {
-                List<String> first = words.stream().map(array -> array[finalI]).collect(Collectors.toList());
-                List<String> distinct = first.stream().distinct().collect(Collectors.toList());
-                System.out.println(distinct);
-                if (distinct.size() > 1) {
-                    stop = true;
-                    result += "*";
-                } else {
-                    result += distinct.get(0) + " ";
-                }
-            }
-            catch (ArrayIndexOutOfBoundsException e){
-                stop=true;
-                result+="*";
-            }
-            i++;
-        }
-        return result;
     }
 
     private void updateStatistics() {
@@ -220,6 +200,33 @@ public class Partition implements Serializable {
             else
                 statForDim.put(finalI, countForDim);
         }
+    }
+
+    private String getSuppresedForPartition(int dim) {
+        List<String> strings=recordArrayList.stream().map(record -> (String)record.getSuppressedDim(dim).getValue()).collect(Collectors.toList());
+        List<String[]> words=strings.stream().map(s1 ->s1.split("\\s+")).collect(Collectors.toList());
+        boolean stop=false;
+        int i=0;
+        String result="";
+        while(!stop && i<words.get(0).length){
+            int finalI = i;
+            try {
+                List<String> first = words.stream().map(array -> array[finalI]).collect(Collectors.toList());
+                List<String> distinct = first.stream().distinct().collect(Collectors.toList());
+                if (distinct.size() > 1) {
+                    stop = true;
+                    result += "*";
+                } else {
+                    result += distinct.get(0) + " ";
+                }
+            }
+            catch (ArrayIndexOutOfBoundsException e){
+                stop=true;
+                result+="*";
+            }
+            i++;
+        }
+        return result;
     }
 
 

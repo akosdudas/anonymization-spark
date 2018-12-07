@@ -30,9 +30,11 @@ public class Mondrian<T extends Record> {
         this.k = k;
         this.sc = sc;
 
-        //just for first version
         quid.add(1);
         quid.add(2);
+        quid.add(3);
+        quid.add(4);
+        quid.add(5);
         setData((JavaRDD<Record>) data);
 
     }
@@ -52,7 +54,6 @@ public class Mondrian<T extends Record> {
         ArrayList<Partition> temp = new ArrayList<>();
 
         temp.add(startData);
-
         while (!temp.isEmpty()) {
 
             Partition toView = temp.remove(0);

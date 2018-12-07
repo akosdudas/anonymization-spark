@@ -15,13 +15,15 @@ public class MedicalRecord {
     @Column(value = "gender")
     private String gender;
     @Column(value = "iranyitoszam")
-    private int iranyitoszam;
+    private int zipCode;
+
+    @Column(value="disease")
+    private String disease;
+    private String gender_final;
     @Column(value="age_final")
     private String age_final;
     @Column(value="iranyitoszam_final")
-    private String iranyitoszam_final;
-    @Column(value="disease")
-    private String disease;
+    private String zipCode_final;
 
     public MedicalRecord() {
     }
@@ -51,11 +53,11 @@ public class MedicalRecord {
     }
 
     public int getIranyitoszam() {
-        return iranyitoszam;
+        return zipCode;
     }
 
     public void setIranyitoszam(int iranyitoszam) {
-        this.iranyitoszam = iranyitoszam;
+        this.zipCode = iranyitoszam;
     }
 
     public String getAge_final() {
@@ -67,11 +69,11 @@ public class MedicalRecord {
     }
 
     public String getIranyitoszam_final() {
-        return iranyitoszam_final;
+        return zipCode_final;
     }
 
     public void setIranyitoszam_final(String iranyitoszam_final) {
-        this.iranyitoszam_final = iranyitoszam_final;
+        this.zipCode_final = iranyitoszam_final;
     }
 
     public String getDisease() {
@@ -86,7 +88,7 @@ public class MedicalRecord {
         this.id = id;
         this.age = age;
         this.gender = gender;
-        this.iranyitoszam = iranyitoszam;
+        this.zipCode = iranyitoszam;
         this.disease = disease;
     }
 }

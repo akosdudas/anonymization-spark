@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Collections;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 
 @RestController
 @RequestMapping("/api")
@@ -27,12 +28,7 @@ public class ReportsController extends BaseController {
         return new ResponseEntity<>(one, HttpStatus.CREATED);
     }
 
-    //
-//    @RequestMapping(value="/medical_data",method = RequestMethod.POST,produces = "application/json")
-//    public ResponseEntity<List<Object>> saveAll(@RequestBody List<MedicalRecord> medicalRecords){
-//        List<MedicalRecord> added=service.saveAll(medicalRecords);
-//        return new ResponseEntity<List<Object>>(Collections.singletonList(added),HttpStatus.CREATED);
-//    }
+
     @RequestMapping(method = RequestMethod.POST, value = "/reports", consumes = "application/json", produces = "application/json")
     public @ResponseBody
     ResponseEntity<?> savePersonList(@RequestBody Resource<ReportWrapper> reportWrapper
@@ -42,10 +38,13 @@ public class ReportsController extends BaseController {
         return ResponseEntity.ok(resources);
     }
 
+
     @RequestMapping(value = "/report_data", method = RequestMethod.GET, produces = "application/json")
     public ResponseEntity<Object> findAll() {
         return new ResponseEntity<>(service.findAll(), HttpStatus.OK);
     }
+
+
 
     @RequestMapping(value = "/report_data/id/{id}", method = RequestMethod.GET, produces = "application/json")
     public ResponseEntity<Object> findOne(@PathVariable int id) {
