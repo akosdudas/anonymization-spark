@@ -38,16 +38,17 @@ public class Anomyzer {
 
     public static void init() {
 
+        if (sc==null) {
+            SparkConf conf = new SparkConf();
+            conf.setAppName("Spark job");
+            conf.setMaster("local[*]");
+            conf.set("spark.cassandra.connection.host", CASSANDRA_ADDRESS_LOCAL);
+            conf.set("spark.executor.instances", "4");
+            conf.set("spark.executor.cores", "5");
 
-        SparkConf conf = new SparkConf();
-        conf.setAppName("Spark job");
-        conf.setMaster("local[*]");
-        conf.set("spark.cassandra.connection.host", CASSANDRA_ADDRESS_LOCAL);
-        conf.set("spark.executor.instances", "4");
-        conf.set("spark.executor.cores", "5");
-
-        sc = new JavaSparkContext(conf);
-        sc.setLogLevel("ERROR");
+            sc = new JavaSparkContext(conf);
+            sc.setLogLevel("ERROR");
+        }
     }
 
     public static void run() {
